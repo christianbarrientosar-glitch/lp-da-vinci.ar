@@ -30,6 +30,7 @@ jobs:
       - name: Check JavaScript and behavior
         run: |
           for script in dist/*.js; do node --check "$script"; done
+          node check-body.cjs
           node check-orbital.cjs
           node check-scroll.cjs
           node check-access.cjs

@@ -19,19 +19,44 @@ function syncRealm(){
 }
 function setAim(value){target=value;angleBeyond=normalAngle(value)>MAX+1e-9;syncRealm();}
 let angle=-.20,target=angle,aperture=.17,targetAperture=.17,scale=1,dx=0,dy=0,frame=0,last=0,drag=null,mode=-1,previous=0,blend=1;
-// A faint, dispersed dusting of gold remains on Leonardo's actual body.
-const particles=(globalThis.DAVINCI_PARTICLES||[]).filter((_,i)=>i%3===0).map(([x,y],i)=>({x:x+Math.sin(i*7.13)*9,y:y+Math.cos(i*5.71)*9,phase:i*2.399}));
-function drawBodyParticles(t){ctx.save();
- for(const p of particles){
-  const drift=reduced.matches?0:Math.sin(t*.00045+p.phase)*1.4;
-  const x=p.x+drift,y=p.y;
-  const glow=ctx.createRadialGradient(x,y,0,x,y,5);
-  glow.addColorStop(0,'rgba(239,199,111,0.22)');
-  glow.addColorStop(.35,'rgba(239,199,111,0.09)');
-  glow.addColorStop(1,'rgba(239,199,111,0)');
-  ctx.globalAlpha=reduced.matches?.65:.55+.15*Math.sin(t*.00035+p.phase);
-  ctx.fillStyle=glow;dot(x,y,5);
- }ctx.restore();}
+// A galaxy inhabits Leonardo's silhouette and converges on his left writing hand.
+const bodyOutline=[[531,230],[620,204],[716,211],[753,282],[777,266],[852,251],[878,340],[937,431],[975,575],[961,660],[1010,710],[1050,786],[1138,1017],[580,1023],[459,814],[405,654],[356,736],[320,708],[331,611],[300,580],[278,554],[281,517],[310,503],[414,472],[465,406],[520,380],[543,325]];
+const bodyStars=(globalThis.DAVINCI_PARTICLES||[]).flatMap(([x,y],i)=>Array.from({length:3},(_,j)=>({x:x+Math.sin(i*7.13+j*2.4)*11,y:y+Math.cos(i*5.71+j*1.7)*11,phase:i*2.399+j*1.3,size:.45+(i+j)%4*.25})));
+const bodyPalette=['#82dfff','#bfa2ff','#ffd4a1','#a9eddf','#eef6ff'];
+const bodySources=[{x:647,y:268},{x:828,y:319},{x:866,y:487},{x:727,y:589},{x:831,y:736},{x:625,y:839},{x:978,y:895}];
+function bodyStreamPoint(origin,u,lane){
+ const v=1-u,p1={x:origin.x*.35+620*.65,y:origin.y>.65*1024?640:430},p2={x:440,y:470+lane*7};
+ return {x:v*v*v*origin.x+3*v*v*u*p1.x+3*v*u*u*p2.x+u*u*u*hand.x,y:v*v*v*origin.y+3*v*v*u*p1.y+3*v*u*u*p2.y+u*u*u*hand.y};
+}
+function drawBodyParticles(t){
+ ctx.save();ctx.beginPath();bodyOutline.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.clip();
+ ctx.fillStyle='rgba(3,9,24,.30)';ctx.fillRect(275,200,880,824);
+ const clock=reduced.matches?0:flowPhase*.0012;
+ for(const [x,y,r,tone] of [[672,445,200,'#607aff'],[769,704,280,'#526bd6'],[486,530,140,'#38c3de'],[660,300,110,'#d7a3ff']]){
+  const fog=ctx.createRadialGradient(x,y,0,x,y,r);fog.addColorStop(0,tone+'50');fog.addColorStop(.45,tone+'25');fog.addColorStop(1,tone+'00');ctx.fillStyle=fog;ctx.fillRect(x-r,y-r,r*2,r*2);
+ }
+ for(let i=0;i<bodyStars.length;i++){
+  const p=bodyStars[i],wave=reduced.matches?0:Math.sin(clock+p.phase);
+  ctx.fillStyle=bodyPalette[i%5];ctx.globalAlpha=.24+(i%5)*.09+wave*.06;
+  ctx.fillRect(p.x+wave*2,p.y+(reduced.matches?0:Math.cos(clock*.8+p.phase)*2),p.size,p.size);
+ }
+ // Seven streams bind head, raised arm, chest, robes and knee to the writing hand.
+ bodySources.forEach((origin,lane)=>{
+  const tone=bodyPalette[lane%5];ctx.strokeStyle=tone+'35';ctx.lineWidth=.55;
+  for(let strand=0;strand<3;strand++){
+   ctx.globalAlpha=.6;ctx.beginPath();for(let j=0;j<=32;j++){const u=j/32,p=bodyStreamPoint(origin,u,lane-3),spread=Math.sin(u*Math.PI)*(strand-1)*14;const x=p.x+spread,y=p.y+Math.sin(u*9+lane+clock)*Math.sin(u*Math.PI)*6;j?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
+  }
+  for(let j=0;j<62;j++){
+   const u=(j/62+(reduced.matches?0:clock*(.055+lane*.003)))%1,p=bodyStreamPoint(origin,u,lane-3);
+   const sway=Math.sin(u*Math.PI)*Math.sin(j*2.4+clock)*10;
+   ctx.globalAlpha=.30+Math.sin(u*Math.PI)*.42;ctx.fillStyle=j%9===0?'#fff6df':tone;
+   dot(p.x+sway,p.y+sway*.35,.65+(j%4)*.3);
+  }
+ });
+ // The constellation concentrates into the tip that turns observation into art.
+ const glow=ctx.createRadialGradient(hand.x,hand.y,0,hand.x,hand.y,28);glow.addColorStop(0,'rgba(255,225,173,.65)');glow.addColorStop(.3,'rgba(127,219,255,.22)');glow.addColorStop(1,'rgba(127,219,255,0)');ctx.globalAlpha=1;ctx.fillStyle=glow;dot(hand.x,hand.y,28);
+ ctx.restore();
+}
 function sector(a){return Math.max(0,Math.min(5,Math.floor((a-MIN)/STEP)));}
 function updateMode(){const next=sector(observationAngle(angle));if(next!==mode){previous=mode<0?next:mode;mode=next;blend=reduced.matches?1:0;canvas.setAttribute('aria-valuetext',sectors[mode].name+'; datos procesados por agentes y convertidos en creación.');}if(beyond)canvas.setAttribute('aria-valuetext','Lado oscuro. Segui girando el haz para volver a Leonardo desde el otro limite. Home recupera la escena.');canvas.setAttribute('aria-valuenow',Math.round(observationAngle(angle)*180/Math.PI));}
 function resize(){const r=scene.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);canvas.width=r.width*d;canvas.height=r.height*d;canvas.style.width=r.width+'px';canvas.style.height=r.height+'px';ctx.setTransform(d,0,0,d,0,0);const mobile=r.width<700;scale=Math.min(r.width/(mobile?1160:1536),r.height/1024);dx=(r.width-(mobile?1160:1536)*scale)/2-(mobile?50*scale:0);dy=(r.height-1024*scale)/2;Object.assign(image.style,{left:dx+'px',top:dy+'px',width:1536*scale+'px',height:1024*scale+'px'});paint(0);}
